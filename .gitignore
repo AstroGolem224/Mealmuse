@@ -1,0 +1,16 @@
+# Build outputs
+build/
+.gradle/
+*.apk
+*.aab
+*.dex
+
+# Local config
+local.properties
+
+# Android Studio / IntelliJ
+.idea/
+*.iml
+
+# Gradle wrapper
+gradle/wrapper/gradle-wrapper.jar
