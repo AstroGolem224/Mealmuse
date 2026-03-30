@@ -62,10 +62,24 @@ class RecipeBookViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(searchQuery = query)
         searchJob?.cancel()
         searchJob = viewModelScope.launch {
-            searchRecipeUseCase(query).collect { result ->
-                if (result is Result.Success) {
-                    _uiState.value = _uiState.value.copy(recipes = result.data)
+            try {
+                searchRecipeUseCase(query).collect { result ->
+                    when (result) {
+                        is Result.Loading -> _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+                        is Result.Success -> _uiState.value = _uiState.value.copy(
+                            recipes = result.data,
+                            isLoading = false,
+                            error = null
+                        )
+                        is Result.Failure -> _uiState.value = _uiState.value.copy(
+                            isLoading = false,
+                            error = result.exception.message
+                        )
+                    }
                 }
+            } catch (e: Exception) {
+                // Catch any unexpected exception from the flow collection
+                _uiState.value = _uiState.value.copy(isLoading = false, error = e.message)
             }
         }
     }

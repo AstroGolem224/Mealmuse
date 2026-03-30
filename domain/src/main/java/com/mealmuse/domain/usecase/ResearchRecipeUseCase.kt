@@ -17,17 +17,21 @@ class ResearchRecipeUseCase @Inject constructor(
             ?: throw IllegalStateException("LLM not configured")
 
         val webResultsResult = recipeSearchRepository.searchWeb(query)
-        val webRecipes = (webResultsResult as? Result.Success)?.data ?: emptyList()
+        val webRecipes = (webResultsResult as? Result.Success)?.data
+        if (!webRecipes.isNullOrEmpty()) {
+            return@suspendResult webRecipes
+        }
 
-        if (webRecipes.isEmpty()) {
-            val prompt = buildString {
-                appendLine("Research and suggest 3 recipes for: $query")
-                appendLine("Return as JSON array of Recipe objects with id, name, description, instructions, macros.")
-            }
-            val aiResult = llmRepository.researchRecipes(prompt, settings)
-            (aiResult as? Result.Success)?.data ?: emptyList()
-        } else {
-            webRecipes
+        // If web search failed or returned empty, fall back to AI research
+        val prompt = buildString {
+            appendLine("Research and suggest 3 recipes for: $query")
+            appendLine("Return as JSON array of Recipe objects with id, name, description, instructions, macros.")
+        }
+        val aiResult = llmRepository.researchRecipes(prompt, settings)
+        when (aiResult) {
+            is Result.Success -> aiResult.data
+            is Result.Failure -> throw aiResult.exception
+            else -> throw IllegalStateException("AI research returned unknown result")
         }
     }
 }
