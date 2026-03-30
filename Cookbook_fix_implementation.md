@@ -39,5 +39,5 @@ Dieses Dokument beschreibt den 9-Phasen-Plan zur Behebung der Abstürze und Fehl
 - [x] Verifikation, dass keine UI-Komponenten mehr in Endlosschleifen messen (Infinity Constraints).
 
 ## Phase 9: Deployment & Handover
-- [ ] Alle Änderungen committen und ins PM-Tool tracken.
-- [ ] Abschluss und Handover.
+- [x] Alle Änderungen committen und ins PM-Tool tracken.
+- [x] Abschluss und Handover.
