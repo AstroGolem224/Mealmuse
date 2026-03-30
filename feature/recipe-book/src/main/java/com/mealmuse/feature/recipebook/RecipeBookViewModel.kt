@@ -32,12 +32,15 @@ class RecipeBookViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(RecipeBookUiState())
     val uiState: StateFlow<RecipeBookUiState> = _uiState.asStateFlow()
 
+    private var searchJob: kotlinx.coroutines.Job? = null
+
     init {
         loadRecipes()
     }
 
     private fun loadRecipes() {
-        viewModelScope.launch {
+        searchJob?.cancel()
+        searchJob = viewModelScope.launch {
             searchRecipeUseCase("").collect { result ->
                 when (result) {
                     is Result.Loading -> _uiState.value = _uiState.value.copy(isLoading = true)
@@ -57,7 +60,8 @@ class RecipeBookViewModel @Inject constructor(
 
     fun search(query: String) {
         _uiState.value = _uiState.value.copy(searchQuery = query)
-        viewModelScope.launch {
+        searchJob?.cancel()
+        searchJob = viewModelScope.launch {
             searchRecipeUseCase(query).collect { result ->
                 if (result is Result.Success) {
                     _uiState.value = _uiState.value.copy(recipes = result.data)
@@ -69,7 +73,8 @@ class RecipeBookViewModel @Inject constructor(
     fun toggleFavorites() {
         _uiState.value = _uiState.value.copy(showFavoritesOnly = !_uiState.value.showFavoritesOnly)
         if (_uiState.value.showFavoritesOnly) {
-            viewModelScope.launch {
+            searchJob?.cancel()
+            searchJob = viewModelScope.launch {
                 recipeRepository.getFavorites().collect { result ->
                     if (result is Result.Success) {
                         _uiState.value = _uiState.value.copy(recipes = result.data)

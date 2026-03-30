@@ -41,7 +41,10 @@ fun RecipeBookScreen(
         ) {
             OutlinedTextField(
                 value = searchQuery,
-                onValueChange = { searchQuery = it },
+                onValueChange = { 
+                    searchQuery = it
+                    viewModel.search(it)
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp),
@@ -49,7 +52,10 @@ fun RecipeBookScreen(
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                 trailingIcon = {
                     if (searchQuery.isNotEmpty()) {
-                        IconButton(onClick = { searchQuery = "" }) {
+                        IconButton(onClick = { 
+                            searchQuery = "" 
+                            viewModel.search("")
+                        }) {
                             Icon(Icons.Default.Clear, contentDescription = "Clear")
                         }
                     }
@@ -60,7 +66,7 @@ fun RecipeBookScreen(
             when {
                 uiState.isLoading -> {
                     Box(
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier.weight(1f).fillMaxWidth(),
                         contentAlignment = Alignment.Center
                     ) {
                         LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
@@ -70,7 +76,7 @@ fun RecipeBookScreen(
                     ErrorCard(
                         message = uiState.error ?: "Unknown error",
                         onRetry = { viewModel.search("") },
-                        modifier = Modifier.padding(16.dp)
+                        modifier = Modifier.padding(16.dp).weight(1f)
                     )
                 }
                 uiState.recipes.isEmpty() -> {
@@ -79,12 +85,14 @@ fun RecipeBookScreen(
                         title = "No recipes yet",
                         subtitle = "Create your first recipe or let AI suggest some!",
                         actionLabel = "Create Recipe",
-                        onAction = { showCreateDialog = true }
+                        onAction = { showCreateDialog = true },
+                        modifier = Modifier.weight(1f)
                     )
                 }
                 else -> {
                     LazyVerticalGrid(
                         columns = GridCells.Fixed(2),
+                        modifier = Modifier.weight(1f),
                         contentPadding = PaddingValues(16.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)

@@ -10,7 +10,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.mealmuse.core.ui.ErrorCard
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -34,7 +33,10 @@ fun RecipeDetailScreen(
                 },
                 actions = {
                     recipe?.let {
-                        IconButton(onClick = { viewModel.deleteRecipe(it.id) }) {
+                        IconButton(onClick = { 
+                            viewModel.deleteRecipe(it.id)
+                            onNavigateBack()
+                        }) {
                             Icon(Icons.Default.Delete, contentDescription = "Delete")
                         }
                     }
