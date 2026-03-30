@@ -1,6 +1,8 @@
 package com.mealmuse.data.ai.provider
 
 import com.mealmuse.data.ai.LLMProvider
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -13,12 +15,12 @@ import javax.inject.Inject
 class NIMProvider @Inject constructor() : LLMProvider {
     private val client = OkHttpClient.Builder()
         .connectTimeout(60, TimeUnit.SECONDS)
-        .readTimeout(120, TimeUnit.SECONDS)
+        .readTimeout(300, TimeUnit.SECONDS)
         .build()
 
     private val defaultBaseUrl = "https://integrate.api.nvidia.com/v1"
 
-    override suspend fun generateContent(prompt: String, apiKey: String, model: String): String {
+    override suspend fun generateContent(prompt: String, apiKey: String, model: String): String = withContext(Dispatchers.IO) {
         val messages = JSONArray().apply {
             put(JSONObject().apply {
                 put("role", "system")
@@ -52,14 +54,14 @@ class NIMProvider @Inject constructor() : LLMProvider {
         }
 
         val json = JSONObject(responseBody)
-        return json.getJSONArray("choices")
+        json.getJSONArray("choices")
             .getJSONObject(0)
             .getJSONObject("message")
             .getString("content")
     }
 
-    override suspend fun validateKey(apiKey: String): Boolean {
-        return try {
+    override suspend fun validateKey(apiKey: String): Boolean = withContext(Dispatchers.IO) {
+        return@withContext try {
             val request = Request.Builder()
                 .url("$defaultBaseUrl/models")
                 .addHeader("Authorization", "Bearer $apiKey")
@@ -70,6 +72,25 @@ class NIMProvider @Inject constructor() : LLMProvider {
             response.isSuccessful
         } catch (e: Exception) {
             false
+        }
+    }
+
+    override suspend fun getAvailableModels(apiKey: String): List<String> = withContext(Dispatchers.IO) {
+        try {
+            val request = Request.Builder()
+                .url("$defaultBaseUrl/models")
+                .addHeader("Authorization", "Bearer $apiKey")
+                .get()
+                .build()
+
+            val response = client.newCall(request).execute()
+            val body = response.body?.string() ?: return@withContext emptyList()
+            if (!response.isSuccessful) return@withContext emptyList()
+
+            val data = JSONObject(body).getJSONArray("data")
+            (0 until data.length()).map { data.getJSONObject(it).getString("id") }
+        } catch (e: Exception) {
+            emptyList()
         }
     }
 }

@@ -1,5 +1,6 @@
 package com.mealmuse.data.ai
 
+import android.util.Log
 import com.mealmuse.domain.model.*
 import com.mealmuse.domain.repository.RecipeImprovement
 import com.mealmuse.domain.repository.RecipeChange
@@ -7,20 +8,34 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 object MealPlanParser {
+    private const val TAG = "MealPlanParser"
+    
     fun parse(json: String): MealPlan {
-        val obj = JSONObject(json)
-        val now = System.currentTimeMillis()
-        return MealPlan(
-            id = obj.optString("id", "generated-$now"),
-            name = obj.optString("name", "Weekly Meal Plan"),
-            weekStart = now,
-            weekEnd = now + (7 * 24 * 60 * 60 * 1000),
-            entries = obj.optJSONArray("entries")?.let { arr ->
-                (0 until arr.length()).map { parseEntry(arr.getJSONObject(it)) }
-            } ?: emptyList(),
-            dietaryMode = DietaryMode.Keto,
-            createdAt = now
-        )
+        Log.d(TAG, "Parsing JSON: ${json.take(200)}")
+        try {
+            val obj = JSONObject(json)
+            val now = System.currentTimeMillis()
+            return MealPlan(
+                id = obj.optString("id", "generated-$now"),
+                name = obj.optString("name", "Weekly Meal Plan"),
+                weekStart = now,
+                weekEnd = now + (7 * 24 * 60 * 60 * 1000),
+                entries = obj.optJSONArray("entries")?.let { arr ->
+                    (0 until arr.length()).mapNotNull { i ->
+                        try { parseEntry(arr.getJSONObject(i)) } 
+                        catch (e: Exception) { 
+                            Log.e(TAG, "Failed to parse entry $i: ${e.message}")
+                            null 
+                        }
+                    }
+                } ?: emptyList(),
+                dietaryMode = DietaryMode.Keto,
+                createdAt = now
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "Parse error: ${e.message}, JSON was: ${json.take(300)}")
+            throw e
+        }
     }
 
     private fun parseEntry(obj: JSONObject): MealPlanEntry = MealPlanEntry(
@@ -33,10 +48,12 @@ object MealPlanParser {
 
     private fun parseRecipe(obj: JSONObject): Recipe = Recipe(
         id = obj.optString("id", "recipe-${System.nanoTime()}"),
-        name = obj.getString("name"),
+        name = obj.optString("name", "Unknown Recipe"),
         description = obj.optString("description", ""),
         instructions = obj.optJSONArray("instructions")?.let { arr ->
-            (0 until arr.length()).map { arr.getString(it) }
+            (0 until arr.length()).mapNotNull { i ->
+                try { arr.getString(i) } catch (e: Exception) { null }
+            }
         } ?: emptyList(),
         prepTimeMinutes = obj.optInt("prepTimeMinutes", 0),
         cookTimeMinutes = obj.optInt("cookTimeMinutes", 0),

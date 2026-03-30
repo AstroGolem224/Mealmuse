@@ -10,6 +10,7 @@ interface LLMRepository {
     suspend fun researchRecipes(prompt: String, settings: LLMSettings): Result<List<Recipe>>
     suspend fun improveRecipe(prompt: String, settings: LLMSettings): Result<RecipeImprovement>
     suspend fun validateApiKey(provider: com.mealmuse.domain.model.LLMProvider, apiKey: String): Result<Boolean>
+    suspend fun getAvailableModels(provider: com.mealmuse.domain.model.LLMProvider, apiKey: String): Result<List<String>>
     suspend fun getLLMSettings(): Result<LLMSettings>
     suspend fun saveLLMSettings(settings: LLMSettings): Result<Unit>
 }

@@ -19,16 +19,27 @@ import com.mealmuse.core.ui.RecipeCard
 @Composable
 fun AISuggestScreen(
     modifier: Modifier = Modifier,
+    onNavigateBack: (() -> Unit)? = null,
     viewModel: AISuggestViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var searchQuery by remember { mutableStateOf("") }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("AI Suggest") }) }
+        topBar = {
+            TopAppBar(
+                title = { Text("AI Suggest") },
+                navigationIcon = {
+                    if (onNavigateBack != null) {
+                        IconButton(onClick = onNavigateBack) {
+                            Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
+                        }
+                    }
+                }
+            )
+        }
     ) { padding ->
         Column(modifier = modifier.fillMaxSize().padding(padding)) {
-            // Tabs
             TabRow(selectedTabIndex = uiState.activeTab) {
                 Tab(
                     selected = uiState.activeTab == 0,
@@ -77,7 +88,7 @@ private fun ResearchTab(
         when {
             uiState.isLoading -> {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
+                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
                 }
             }
             uiState.searchResults.isEmpty() -> {
@@ -122,7 +133,7 @@ private fun ImproveTab(
 
     if (uiState.isLoading) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator()
+            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
         }
         return
     }

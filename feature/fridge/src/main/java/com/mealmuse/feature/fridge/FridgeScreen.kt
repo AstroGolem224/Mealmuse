@@ -29,9 +29,6 @@ fun FridgeScreen(
     var searchQuery by remember { mutableStateOf("") }
 
     Scaffold(
-        topBar = {
-            TopAppBar(title = { Text("Fridge") })
-        },
         floatingActionButton = {
             FloatingActionButton(onClick = { showAddDialog = true }) {
                 Icon(Icons.Default.Add, contentDescription = "Add Ingredient")
@@ -119,7 +116,7 @@ fun FridgeScreen(
             when {
                 uiState.isLoading -> {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
+                        LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
                     }
                 }
                 uiState.ingredients.isEmpty() -> {

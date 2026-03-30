@@ -1,5 +1,6 @@
 package com.mealmuse.data.ai
 
+import android.util.Log
 import com.mealmuse.core.common.Result
 import com.mealmuse.core.common.suspendResult
 import com.mealmuse.domain.model.LLMProvider
@@ -15,10 +16,23 @@ class LLMRepositoryImpl @Inject constructor(
     private val settingsStore: LLMSettingsStore
 ) : LLMRepository {
 
+    companion object {
+        private const val TAG = "LLMRepository"
+    }
+
     override suspend fun generateMealPlan(prompt: String, settings: LLMSettings): Result<MealPlan> =
         suspendResult {
+            Log.d(TAG, "Generating meal plan with model: ${settings.model}, provider: ${settings.provider}")
             val provider = providerFactory.createProvider(settings.provider)
             val rawResponse = provider.generateContent(prompt, settings.apiKey, settings.model)
+            Log.d(TAG, "LLM Response length: ${rawResponse.length}")
+            Log.d(TAG, "LLM Response: ${rawResponse.take(300)}")
+            
+            if (rawResponse.contains("error", ignoreCase = true) || 
+                rawResponse.contains("Cannot read", ignoreCase = true)) {
+                throw Exception("LLM returned an error: $rawResponse")
+            }
+            
             val cleanedJson = cleanJsonResponse(rawResponse)
             MealPlanParser.parse(cleanedJson)
         }
@@ -43,6 +57,12 @@ class LLMRepositoryImpl @Inject constructor(
         suspendResult {
             val llmProvider = providerFactory.createProvider(provider)
             llmProvider.validateKey(apiKey)
+        }
+
+    override suspend fun getAvailableModels(provider: LLMProvider, apiKey: String): Result<List<String>> =
+        suspendResult {
+            val llmProvider = providerFactory.createProvider(provider)
+            llmProvider.getAvailableModels(apiKey)
         }
 
     override suspend fun getLLMSettings(): Result<LLMSettings> =

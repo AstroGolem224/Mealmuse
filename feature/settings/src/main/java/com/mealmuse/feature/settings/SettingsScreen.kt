@@ -20,12 +20,23 @@ import com.mealmuse.domain.model.LLMProvider
 @Composable
 fun SettingsScreen(
     modifier: Modifier = Modifier,
+    onNavigateBack: () -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    var modelDropdownExpanded by remember { mutableStateOf(false) }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Settings") }) }
+        topBar = {
+            TopAppBar(
+                title = { Text("Settings") },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    }
+                }
+            )
+        }
     ) { padding ->
         Column(
             modifier = modifier
@@ -59,7 +70,7 @@ fun SettingsScreen(
                 trailingIcon = {
                     Row {
                         if (uiState.isValidating) {
-                            CircularProgressIndicator(modifier = Modifier.size(20.dp))
+                            Text("...", modifier = Modifier.size(20.dp))
                         } else {
                             IconButton(onClick = { viewModel.validateKey() }) {
                                 Icon(Icons.Default.Check, contentDescription = "Validate")
@@ -76,27 +87,110 @@ fun SettingsScreen(
                 }
             )
 
-            // Model Selector
-            Text("Model", style = MaterialTheme.typography.labelMedium)
+            // Model Selector with Refresh
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Model", style = MaterialTheme.typography.labelMedium)
+                TextButton(
+                    onClick = { viewModel.refreshModels() },
+                    enabled = !uiState.isRefreshingModels
+                ) {
+                    Icon(
+                        Icons.Default.Refresh,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(if (uiState.isRefreshingModels) "Loading..." else "Refresh")
+                }
+            }
+
             ExposedDropdownMenuBox(
-                expanded = false,
-                onExpandedChange = {}
+                expanded = modelDropdownExpanded,
+                onExpandedChange = { modelDropdownExpanded = it }
             ) {
                 OutlinedTextField(
-                    value = uiState.settings.model,
+                    value = uiState.settings.model.ifBlank { "Select a model" },
                     onValueChange = {},
                     readOnly = true,
                     label = { Text("Model") },
-                    modifier = Modifier.fillMaxWidth().menuAnchor()
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = modelDropdownExpanded) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor()
                 )
-                DropdownMenu(
-                    expanded = false,
-                    onDismissRequest = {}
+                ExposedDropdownMenu(
+                    expanded = modelDropdownExpanded,
+                    onDismissRequest = { modelDropdownExpanded = false }
                 ) {
-                    uiState.availableModels.forEach { model ->
+                    if (uiState.availableModels.isEmpty()) {
                         DropdownMenuItem(
-                            text = { Text(model) },
-                            onClick = { viewModel.selectModel(model) }
+                            text = { Text("No models available") },
+                            onClick = { modelDropdownExpanded = false },
+                            enabled = false
+                        )
+                    } else {
+                        uiState.availableModels.forEach { model ->
+                            DropdownMenuItem(
+                                text = { Text(model) },
+                                onClick = {
+                                    viewModel.selectModel(model)
+                                    modelDropdownExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Model Info
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+            ) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Text(
+                        "Model Tips:",
+                        style = MaterialTheme.typography.labelMedium
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    when (uiState.settings.provider) {
+                        LLMProvider.OPENAI -> Text(
+                            "• gpt-4o-mini: Fast & cheap (Recommended)\n• gpt-4o: Most capable\n• gpt-3.5-turbo: Legacy",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        LLMProvider.ANTHROPIC -> Text(
+                            "• claude-sonnet-4: Latest & best\n• claude-3.5-sonnet: Great balance\n• claude-3-haiku: Fast & cheap",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        LLMProvider.OPENROUTER -> {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    Icons.Default.Star,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    "FREE models available!",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                "• gemma-3-4b: Fast & reliable (Recommended)\n• gemma-3-27b: Most capable\n• Try llama for larger context",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                        LLMProvider.NIM -> Text(
+                            "• NVIDIA NIM for local/self-hosted\n• Enter your server Base URL",
+                            style = MaterialTheme.typography.bodySmall
                         )
                     }
                 }
@@ -107,9 +201,10 @@ fun SettingsScreen(
                 OutlinedTextField(
                     value = uiState.settings.baseUrl ?: "",
                     onValueChange = { viewModel.updateBaseUrl(it) },
-                    label = { Text("Base URL (optional)") },
+                    label = { Text("Base URL") },
                     modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("https://your-nim-server/v1") }
+                    placeholder = { Text("https://your-nim-server/v1") },
+                    leadingIcon = { Icon(Icons.Default.Link, contentDescription = null) }
                 )
             }
 
@@ -117,23 +212,30 @@ fun SettingsScreen(
                 Card(
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
                 ) {
-                    Text(error, modifier = Modifier.padding(16.dp))
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Default.Error,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(error, color = MaterialTheme.colorScheme.onErrorContainer)
+                    }
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             // Save Button
             Button(
                 onClick = { viewModel.saveSettings() },
                 modifier = Modifier.fillMaxWidth(),
-                enabled = !uiState.isSaving
+                enabled = !uiState.isSaving && uiState.settings.apiKey.isNotBlank()
             ) {
-                if (uiState.isSaving) {
-                    CircularProgressIndicator(modifier = Modifier.size(20.dp))
-                } else {
-                    Text("Save Configuration")
-                }
+                Text(if (uiState.isSaving) "Saving..." else "Save Configuration")
             }
 
             // Status

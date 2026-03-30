@@ -1,6 +1,8 @@
 package com.mealmuse.data.ai.provider
 
 import com.mealmuse.data.ai.LLMProvider
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -13,12 +15,12 @@ import javax.inject.Inject
 class AnthropicProvider @Inject constructor() : LLMProvider {
     private val client = OkHttpClient.Builder()
         .connectTimeout(60, TimeUnit.SECONDS)
-        .readTimeout(120, TimeUnit.SECONDS)
+        .readTimeout(300, TimeUnit.SECONDS)
         .build()
 
     private val baseUrl = "https://api.anthropic.com/v1"
 
-    override suspend fun generateContent(prompt: String, apiKey: String, model: String): String {
+    override suspend fun generateContent(prompt: String, apiKey: String, model: String): String = withContext(Dispatchers.IO) {
         val body = JSONObject().apply {
             put("model", model)
             put("max_tokens", 4096)
@@ -48,11 +50,11 @@ class AnthropicProvider @Inject constructor() : LLMProvider {
 
         val json = JSONObject(responseBody)
         val content = json.getJSONArray("content")
-        return content.getJSONObject(0).getString("text")
+        content.getJSONObject(0).getString("text")
     }
 
-    override suspend fun validateKey(apiKey: String): Boolean {
-        return try {
+    override suspend fun validateKey(apiKey: String): Boolean = withContext(Dispatchers.IO) {
+        return@withContext try {
             val body = JSONObject().apply {
                 put("model", "claude-3-haiku-20240307")
                 put("max_tokens", 1)

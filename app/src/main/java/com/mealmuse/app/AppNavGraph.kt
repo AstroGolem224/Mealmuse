@@ -11,12 +11,15 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.mealmuse.feature.mealplanner.MealPlanScreen
 import com.mealmuse.feature.recipebook.RecipeBookScreen
+import com.mealmuse.feature.recipebook.RecipeDetailScreen
 import com.mealmuse.feature.fridge.FridgeScreen
 import com.mealmuse.feature.aisuggest.AISuggestScreen
 import com.mealmuse.feature.onboarding.OnboardingScreen
@@ -47,14 +50,42 @@ fun AppNavGraph() {
     val currentDestination = navBackStackEntry?.destination
     val context = LocalContext.current
 
-    val prefs = context.getSharedPreferences("mealmuse_prefs", Context.MODE_PRIVATE)
+    val prefs = remember { context.getSharedPreferences("mealmuse_prefs", Context.MODE_PRIVATE) }
     val onboardingCompleted = remember { mutableStateOf(prefs.getBoolean("onboarding_completed", false)) }
 
-    val showBottomBar = bottomNavItems.any { currentDestination?.hierarchy?.any { dest ->
-        dest.route == it.route
-    } == true }
+    val showBottomBar = remember(currentDestination) {
+        bottomNavItems.any { currentDestination?.hierarchy?.any { dest ->
+            dest.route == it.route
+        } == true }
+    }
+
+    val currentRoute = currentDestination?.route
 
     Scaffold(
+        topBar = {
+            if (showBottomBar && onboardingCompleted.value) {
+                TopAppBar(
+                    title = {
+                        Text(
+                            when (currentRoute) {
+                                Screen.MealPlan.route -> "Meal Plan"
+                                Screen.Cookbook.route -> "Cookbook"
+                                Screen.Fridge.route -> "Fridge"
+                                else -> "MealMuse"
+                            }
+                        )
+                    },
+                    actions = {
+                        IconButton(onClick = { navController.navigate("preferences") }) {
+                            Icon(Icons.Default.Tune, contentDescription = "Preferences")
+                        }
+                        IconButton(onClick = { navController.navigate("settings") }) {
+                            Icon(Icons.Default.Settings, contentDescription = "Settings")
+                        }
+                    }
+                )
+            }
+        },
         bottomBar = {
             if (showBottomBar && onboardingCompleted.value) {
                 NavigationBar {
@@ -78,11 +109,15 @@ fun AppNavGraph() {
             }
         },
         floatingActionButton = {
-            if (currentDestination?.route == "cookbook") {
-                FloatingActionButton(onClick = {
-                    navController.navigate("ai_suggest")
-                }) {
-                    Icon(Icons.Default.AutoAwesome, contentDescription = "AI Suggest")
+            if (onboardingCompleted.value) {
+                when (currentRoute) {
+                    Screen.Cookbook.route, Screen.Fridge.route -> {
+                        FloatingActionButton(onClick = {
+                            navController.navigate("ai_suggest")
+                        }) {
+                            Icon(Icons.Default.AutoAwesome, contentDescription = "AI Suggest")
+                        }
+                    }
                 }
             }
         }
@@ -107,19 +142,39 @@ fun AppNavGraph() {
                 MealPlanScreen()
             }
             composable(Screen.Cookbook.route) {
-                RecipeBookScreen()
+                RecipeBookScreen(
+                    onRecipeClick = { recipeId ->
+                        navController.navigate("recipe_detail/$recipeId")
+                    }
+                )
             }
             composable(Screen.Fridge.route) {
                 FridgeScreen()
             }
             composable("ai_suggest") {
-                AISuggestScreen()
+                AISuggestScreen(
+                    onNavigateBack = { navController.popBackStack() }
+                )
             }
             composable("preferences") {
-                PreferencesScreen()
+                PreferencesScreen(
+                    onNavigateBack = { navController.popBackStack() }
+                )
             }
             composable("settings") {
-                SettingsScreen()
+                SettingsScreen(
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+            composable(
+                route = "recipe_detail/{recipeId}",
+                arguments = listOf(navArgument("recipeId") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val recipeId = backStackEntry.arguments?.getString("recipeId") ?: ""
+                RecipeDetailScreen(
+                    recipeId = recipeId,
+                    onNavigateBack = { navController.popBackStack() }
+                )
             }
         }
     }

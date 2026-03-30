@@ -20,6 +20,7 @@ import com.mealmuse.core.ui.RecipeCard
 @Composable
 fun RecipeBookScreen(
     modifier: Modifier = Modifier,
+    onRecipeClick: (String) -> Unit = {},
     viewModel: RecipeBookViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -27,22 +28,9 @@ fun RecipeBookScreen(
     var showCreateDialog by remember { mutableStateOf(false) }
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Cookbook") },
-                actions = {
-                    IconButton(onClick = { viewModel.toggleFavorites() }) {
-                        Icon(
-                            if (uiState.showFavoritesOnly) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                            contentDescription = "Favorites"
-                        )
-                    }
-                }
-            )
-        },
         floatingActionButton = {
             FloatingActionButton(onClick = { showCreateDialog = true }) {
-                Icon(Icons.Default.Add, contentDescription = "Add Recipe")
+                Icon(Icons.Default.Add, contentDescription = "Create Recipe")
             }
         }
     ) { padding ->
@@ -53,33 +41,43 @@ fun RecipeBookScreen(
         ) {
             OutlinedTextField(
                 value = searchQuery,
-                onValueChange = {
-                    searchQuery = it
-                    viewModel.search(it)
-                },
+                onValueChange = { searchQuery = it },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                    .padding(16.dp),
                 placeholder = { Text("Search recipes...") },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                trailingIcon = {
+                    if (searchQuery.isNotEmpty()) {
+                        IconButton(onClick = { searchQuery = "" }) {
+                            Icon(Icons.Default.Clear, contentDescription = "Clear")
+                        }
+                    }
+                },
                 singleLine = true
             )
 
-            uiState.error?.let { error ->
-                ErrorCard(message = error, onRetry = { viewModel.clearError() })
-            }
-
             when {
                 uiState.isLoading -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
                     }
+                }
+                uiState.error != null -> {
+                    ErrorCard(
+                        message = uiState.error ?: "Unknown error",
+                        onRetry = { viewModel.search("") },
+                        modifier = Modifier.padding(16.dp)
+                    )
                 }
                 uiState.recipes.isEmpty() -> {
                     EmptyState(
                         icon = Icons.Default.MenuBook,
                         title = "No recipes yet",
-                        subtitle = "Create your first recipe or generate a meal plan to get started",
+                        subtitle = "Create your first recipe or let AI suggest some!",
                         actionLabel = "Create Recipe",
                         onAction = { showCreateDialog = true }
                     )
@@ -87,7 +85,6 @@ fun RecipeBookScreen(
                 else -> {
                     LazyVerticalGrid(
                         columns = GridCells.Fixed(2),
-                        modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(16.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -95,10 +92,10 @@ fun RecipeBookScreen(
                         items(uiState.recipes, key = { it.id }) { recipe ->
                             RecipeCard(
                                 title = recipe.name,
-                                subtitle = "${recipe.totalTimeMinutes} min • ${recipe.servings} servings",
+                                subtitle = "${recipe.totalTimeMinutes} min | ${recipe.servings} servings",
                                 imageUrl = recipe.imageUrl,
                                 calories = recipe.calories.toInt(),
-                                onClick = { /* Navigate to detail */ }
+                                onClick = { onRecipeClick(recipe.id) }
                             )
                         }
                     }
@@ -178,23 +175,26 @@ private fun CreateRecipeDialog(
             }
         },
         confirmButton = {
-            Button(
+            TextButton(
                 onClick = {
-                    if (name.isNotBlank()) {
-                        onConfirm(
-                            name,
-                            description,
-                            instructions.split("\n").filter { it.isNotBlank() },
-                            prepTime.toIntOrNull() ?: 0,
-                            cookTime.toIntOrNull() ?: 0,
-                            servings.toIntOrNull() ?: 1
-                        )
-                    }
-                }
-            ) { Text("Create") }
+                    onConfirm(
+                        name,
+                        description,
+                        instructions.split("\n").filter { it.isNotBlank() },
+                        prepTime.toIntOrNull() ?: 0,
+                        cookTime.toIntOrNull() ?: 0,
+                        servings.toIntOrNull() ?: 2
+                    )
+                },
+                enabled = name.isNotBlank()
+            ) {
+                Text("Create")
+            }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
         }
     )
 }
