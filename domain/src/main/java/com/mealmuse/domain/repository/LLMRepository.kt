@@ -4,6 +4,7 @@ import com.mealmuse.core.common.Result
 import com.mealmuse.domain.model.LLMSettings
 import com.mealmuse.domain.model.MealPlan
 import com.mealmuse.domain.model.Recipe
+import kotlinx.coroutines.flow.Flow
 
 interface LLMRepository {
     suspend fun generateMealPlan(prompt: String, settings: LLMSettings): Result<MealPlan>
@@ -12,6 +13,7 @@ interface LLMRepository {
     suspend fun validateApiKey(provider: com.mealmuse.domain.model.LLMProvider, apiKey: String): Result<Boolean>
     suspend fun getAvailableModels(provider: com.mealmuse.domain.model.LLMProvider, apiKey: String): Result<List<String>>
     suspend fun getLLMSettings(): Result<LLMSettings>
+    fun getLLMSettingsFlow(): Flow<LLMSettings>
     suspend fun saveLLMSettings(settings: LLMSettings): Result<Unit>
 }
 

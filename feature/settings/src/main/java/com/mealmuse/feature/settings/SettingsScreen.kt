@@ -12,6 +12,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.mealmuse.domain.model.LLMProvider
@@ -25,8 +26,18 @@ fun SettingsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var modelDropdownExpanded by remember { mutableStateOf(false) }
+    var passwordVisible by remember { mutableStateOf(false) }
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // Show snackbar on successful save
+    LaunchedEffect(uiState.validationResult) {
+        if (uiState.validationResult == true) {
+            snackbarHostState.showSnackbar("Settings saved successfully")
+        }
+    }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text("Settings") },
@@ -66,7 +77,7 @@ fun SettingsScreen(
                 onValueChange = { viewModel.updateApiKey(it) },
                 label = { Text("API Key") },
                 modifier = Modifier.fillMaxWidth(),
-                visualTransformation = PasswordVisualTransformation(),
+                visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 trailingIcon = {
                     Row {
                         if (uiState.isValidating) {
@@ -75,6 +86,12 @@ fun SettingsScreen(
                             IconButton(onClick = { viewModel.validateKey() }) {
                                 Icon(Icons.Default.Check, contentDescription = "Validate")
                             }
+                        }
+                        IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                            Icon(
+                                if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                contentDescription = if (passwordVisible) "Hide API key" else "Show API key"
+                            )
                         }
                     }
                 },
@@ -236,6 +253,16 @@ fun SettingsScreen(
                 enabled = !uiState.isSaving && uiState.settings.apiKey.isNotBlank()
             ) {
                 Text(if (uiState.isSaving) "Saving..." else "Save Configuration")
+            }
+
+            // Reset to Defaults
+            OutlinedButton(
+                onClick = { viewModel.resetSettings() },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Default.Refresh, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Reset to Defaults")
             }
 
             // Status

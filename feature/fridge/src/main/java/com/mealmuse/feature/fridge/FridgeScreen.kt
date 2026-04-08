@@ -11,6 +11,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.mealmuse.core.ui.EmptyState
@@ -163,7 +165,20 @@ private fun IngredientItem(
     onDelete: () -> Unit
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().semantics {
+            contentDescription = buildString {
+                append(ingredient.name)
+                append(", ")
+                append(ingredient.quantity)
+                append(" ")
+                append(ingredient.unit)
+                append(" • ")
+                append(ingredient.category.displayName)
+                if (ingredient.isExpiringSoon) {
+                    append(" (expiring soon)")
+                }
+            }
+        },
         colors = CardDefaults.cardColors(
             containerColor = if (ingredient.isExpiringSoon) {
                 MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f)
@@ -211,6 +226,7 @@ private fun AddIngredientDialog(
     var quantity by remember { mutableStateOf("") }
     var unit by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf(IngredientCategory.OTHER) }
+    var quantityError by remember { mutableStateOf<String?>(null) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -226,8 +242,20 @@ private fun AddIngredientDialog(
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
                         value = quantity,
-                        onValueChange = { quantity = it },
+                        onValueChange = { 
+                            quantity = it
+                            quantityError = when {
+                                it.isBlank() -> null
+                                it.toFloatOrNull() == null -> "Enter a valid number"
+                                it.toFloatOrNull() == 0f -> "Quantity must be > 0"
+                                else -> null
+                            }
+                        },
                         label = { Text("Qty") },
+                        isError = quantityError != null,
+                        supportingText = if (quantityError != null) {
+                            { Text(quantityError!!, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error) }
+                        } else null,
                         modifier = Modifier.weight(1f)
                     )
                     OutlinedTextField(
@@ -252,10 +280,12 @@ private fun AddIngredientDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    if (name.isNotBlank() && quantity.isNotBlank()) {
-                        onConfirm(name, quantity.toFloatOrNull() ?: 0f, unit, selectedCategory, null)
+                    val qty = quantity.toFloatOrNull()
+                    if (name.isNotBlank() && qty != null && qty > 0) {
+                        onConfirm(name, qty, unit, selectedCategory, null)
                     }
-                }
+                },
+                enabled = name.isNotBlank() && quantity.toFloatOrNull()?.let { it > 0 } == true
             ) { Text("Add") }
         },
         dismissButton = {

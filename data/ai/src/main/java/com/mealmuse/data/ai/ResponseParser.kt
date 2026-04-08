@@ -75,7 +75,7 @@ object RecipeResearchParser {
             val obj = arr.getJSONObject(i)
             Recipe(
                 id = obj.optString("id", "research-$now-$i"),
-                name = obj.getString("name"),
+                name = obj.optString("name", "Unknown Recipe"),
                 description = obj.optString("description", ""),
                 instructions = obj.optJSONArray("instructions")?.let { instr ->
                     (0 until instr.length()).map { instr.getString(it) }

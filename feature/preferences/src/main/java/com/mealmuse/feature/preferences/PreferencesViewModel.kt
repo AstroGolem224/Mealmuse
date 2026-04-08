@@ -111,6 +111,21 @@ class PreferencesViewModel @Inject constructor(
         }
     }
 
+    fun resetPreferences() {
+        val defaults = UserPreferences(
+            dietaryModes = listOf(DietaryMode.Keto),
+            maxCalories = 2000,
+            minProtein = 50,
+            maxCarbs = 300,
+            maxFat = 70
+        )
+        _uiState.value = _uiState.value.copy(preferences = defaults, isSaved = false)
+        // Auto-save
+        viewModelScope.launch {
+            manageUserPreferencesUseCase.savePreferences(defaults)
+        }
+    }
+
     fun clearError() {
         _uiState.value = _uiState.value.copy(error = null)
     }

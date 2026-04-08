@@ -32,13 +32,15 @@ class MealPlanViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(MealPlanUiState())
     val uiState: StateFlow<MealPlanUiState> = _uiState.asStateFlow()
 
+    private var generationJob: kotlinx.coroutines.Job? = null
+
     fun setDuration(days: Int) {
         _uiState.value = _uiState.value.copy(selectedDuration = days, weekOffset = 0)
     }
 
     fun generatePlan() {
-        val duration = _uiState.value.selectedDuration
-        viewModelScope.launch {
+        generationJob?.cancel()
+        generationJob = viewModelScope.launch {
             _uiState.value = _uiState.value.copy(
                 isGenerating = true,
                 error = null,
@@ -46,7 +48,7 @@ class MealPlanViewModel @Inject constructor(
             )
             try {
                 when (val result = generateMealPlanUseCase(
-                    durationDays = duration,
+                    durationDays = _uiState.value.selectedDuration,
                     onChunkComplete = { done, total ->
                         _uiState.value = _uiState.value.copy(
                             generationProgress = "Part $done of $total..."

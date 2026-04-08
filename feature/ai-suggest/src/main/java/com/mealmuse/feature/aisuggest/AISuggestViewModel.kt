@@ -20,7 +20,8 @@ data class AISuggestUiState(
     val improvement: RecipeImprovement? = null,
     val isLoading: Boolean = false,
     val activeTab: Int = 0,
-    val error: String? = null
+    val error: String? = null,
+    val selectedRecipe: Recipe? = null
 )
 
 @HiltViewModel
@@ -51,9 +52,19 @@ class AISuggestViewModel @Inject constructor(
     }
 
     fun improveRecipe(recipe: Recipe, focus: String = "health") {
+        selectRecipe(recipe)
+        improveRecipe(focus)
+    }
+
+    fun improveRecipe(focus: String = "health") {
+        val selected = _uiState.value.selectedRecipe
+        if (selected == null) {
+            _uiState.value = _uiState.value.copy(error = "Please select a recipe first")
+            return
+        }
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-            when (val result = improveRecipeUseCase(recipe, focus)) {
+            when (val result = improveRecipeUseCase(selected, focus)) {
                 is Result.Success -> _uiState.value = _uiState.value.copy(
                     improvement = result.data,
                     isLoading = false
@@ -65,6 +76,10 @@ class AISuggestViewModel @Inject constructor(
                 is Result.Loading -> {}
             }
         }
+    }
+
+    fun selectRecipe(recipe: Recipe?) {
+        _uiState.value = _uiState.value.copy(selectedRecipe = recipe)
     }
 
     fun saveRecipe(recipe: Recipe) {

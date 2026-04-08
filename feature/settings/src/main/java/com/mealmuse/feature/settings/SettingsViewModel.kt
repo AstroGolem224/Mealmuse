@@ -157,7 +157,7 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun saveSettings() {
+     fun saveSettings() {
         val settings = _uiState.value.settings
         Log.d(TAG, "Saving settings: provider=${settings.provider}, model=${settings.model}, apiKeySet=${settings.apiKey.isNotBlank()}")
         
@@ -190,6 +190,25 @@ class SettingsViewModel @Inject constructor(
                 }
                 is Result.Loading -> {}
             }
+        }
+    }
+
+    fun resetSettings() {
+        val defaults = LLMSettings(
+            provider = LLMProvider.OPENAI,
+            apiKey = "",
+            model = "gpt-4o-mini",
+            isActive = false
+        )
+        _uiState.value = _uiState.value.copy(
+            settings = defaults,
+            availableModels = manageLLMSettingsUseCase.getModelsForProvider(LLMProvider.OPENAI),
+            validationResult = null,
+            error = null
+        )
+        // Save empty defaults
+        viewModelScope.launch {
+            manageLLMSettingsUseCase.saveSettings(defaults)
         }
     }
 

@@ -63,6 +63,26 @@ fun RecipeBookScreen(
                 singleLine = true
             )
 
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.Start
+            ) {
+                FilterChip(
+                    selected = uiState.showFavoritesOnly,
+                    onClick = { viewModel.toggleFavorites() },
+                    label = { Text("Favorites") },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Default.Favorite,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                )
+            }
+
             when {
                 uiState.isLoading -> {
                     Box(

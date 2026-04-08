@@ -9,16 +9,26 @@ import com.mealmuse.domain.model.MealPlan
 import com.mealmuse.domain.model.Recipe
 import com.mealmuse.domain.repository.LLMRepository
 import com.mealmuse.domain.repository.RecipeImprovement
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import javax.inject.Inject
 
 class LLMRepositoryImpl @Inject constructor(
     private val providerFactory: LLMProviderFactory,
-    private val settingsStore: LLMSettingsStore
+    @ApplicationContext private val context: android.content.Context
 ) : LLMRepository {
 
     companion object {
         private const val TAG = "LLMRepository"
     }
+
+    private val settingsStore = LLMSettingsStore(context)
+    private val _settingsFlow = MutableStateFlow(settingsStore.getSettings())
+    override fun getLLMSettingsFlow(): Flow<LLMSettings> = _settingsFlow.asStateFlow()
 
     override suspend fun generateMealPlan(prompt: String, settings: LLMSettings): Result<MealPlan> =
         suspendResult {
@@ -29,8 +39,9 @@ class LLMRepositoryImpl @Inject constructor(
             Log.d(TAG, "LLM Response: ${rawResponse.take(300)}")
             
             if (rawResponse.contains("error", ignoreCase = true) || 
-                rawResponse.contains("Cannot read", ignoreCase = true)) {
-                throw Exception("LLM returned an error: $rawResponse")
+                rawResponse.contains("Cannot read", ignoreCase = true) ||
+                rawResponse.isBlank()) {
+                throw Exception("LLM returned an error or empty response: $rawResponse")
             }
             
             val cleanedJson = cleanJsonResponse(rawResponse)
@@ -66,10 +77,13 @@ class LLMRepositoryImpl @Inject constructor(
         }
 
     override suspend fun getLLMSettings(): Result<LLMSettings> =
-        suspendResult { settingsStore.getSettings() }
+        suspendResult { _settingsFlow.value }
 
     override suspend fun saveLLMSettings(settings: LLMSettings): Result<Unit> =
-        suspendResult { settingsStore.saveSettings(settings) }
+        suspendResult {
+            settingsStore.saveSettings(settings)
+            _settingsFlow.update { settings }
+        }
 
     private fun cleanJsonResponse(raw: String): String {
         var cleaned = raw.trim()

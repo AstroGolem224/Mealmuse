@@ -122,6 +122,16 @@ fun PreferencesScreen(
                 }
             }
 
+            // Reset to Defaults
+            OutlinedButton(
+                onClick = { viewModel.resetPreferences() },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Default.Refresh, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Reset to Defaults")
+            }
+
             // Error
             uiState.error?.let { error ->
                 Card(

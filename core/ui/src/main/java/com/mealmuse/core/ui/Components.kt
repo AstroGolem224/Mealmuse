@@ -14,6 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
@@ -48,7 +49,9 @@ fun RecipeCard(
                         .fillMaxWidth()
                         .height(180.dp)
                         .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)),
-                    contentScale = ContentScale.Crop
+                    contentScale = ContentScale.Crop,
+                    placeholder = ColorPainter(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
+                    error = ColorPainter(MaterialTheme.colorScheme.error.copy(alpha = 0.3f))
                 )
             } else {
                 Box(
@@ -283,7 +286,7 @@ fun ErrorCard(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "Fehler",
+                    text = "Error",
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onErrorContainer
                 )
@@ -296,7 +299,7 @@ fun ErrorCard(
             )
             Spacer(modifier = Modifier.height(12.dp))
             OutlinedButton(onClick = onRetry) {
-                Text("Erneut versuchen")
+                Text("Retry")
             }
         }
     }

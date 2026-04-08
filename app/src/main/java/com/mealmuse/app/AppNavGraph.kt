@@ -17,6 +17,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.mealmuse.domain.model.LLMSettings
+import com.mealmuse.domain.repository.LLMRepository
 import com.mealmuse.feature.mealplanner.MealPlanScreen
 import com.mealmuse.feature.recipebook.RecipeBookScreen
 import com.mealmuse.feature.recipebook.RecipeDetailScreen
@@ -25,6 +27,8 @@ import com.mealmuse.feature.aisuggest.AISuggestScreen
 import com.mealmuse.feature.onboarding.OnboardingScreen
 import com.mealmuse.feature.preferences.PreferencesScreen
 import com.mealmuse.feature.settings.SettingsScreen
+import kotlinx.coroutines.flow.Flow
+import androidx.compose.runtime.collectAsState
 
 sealed class Screen(
     val route: String,
@@ -44,7 +48,9 @@ private val bottomNavItems = listOf(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AppNavGraph() {
+fun AppNavGraph(
+    llmRepository: LLMRepository
+) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
@@ -60,6 +66,16 @@ fun AppNavGraph() {
     }
 
     val currentRoute = currentDestination?.route
+
+    // Reactive LLM settings for FAB visibility
+    val llmSettings by llmRepository.getLLMSettingsFlow().collectAsState(
+        initial = LLMSettings(
+            provider = com.mealmuse.domain.model.LLMProvider.OPENAI,
+            apiKey = "",
+            model = "gpt-4o-mini",
+            isActive = false
+        )
+    )
 
     Scaffold(
         topBar = {
@@ -110,8 +126,9 @@ fun AppNavGraph() {
         },
         floatingActionButton = {
             if (onboardingCompleted.value) {
-                when (currentRoute) {
-                    Screen.Cookbook.route, Screen.Fridge.route -> {
+                val currentRoute = currentDestination?.route
+                if (currentRoute == Screen.Cookbook.route || currentRoute == Screen.Fridge.route) {
+                    if (llmSettings.isActive && llmSettings.apiKey.isNotBlank()) {
                         FloatingActionButton(onClick = {
                             navController.navigate("ai_suggest")
                         }) {

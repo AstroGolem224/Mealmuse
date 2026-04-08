@@ -102,10 +102,12 @@ class RecipeBookViewModel @Inject constructor(
 
     fun createRecipe(name: String, description: String, instructions: List<String>, prepTime: Int, cookTime: Int, servings: Int) {
         viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            val now = System.currentTimeMillis()
             val recipe = Recipe(
                 id = generateUUID(),
-                name = name,
-                description = description,
+                name = name.trim(),
+                description = description.trim(),
                 instructions = instructions,
                 prepTimeMinutes = prepTime,
                 cookTimeMinutes = cookTime,
@@ -114,10 +116,22 @@ class RecipeBookViewModel @Inject constructor(
                 protein = 0f,
                 carbs = 0f,
                 fat = 0f,
-                createdAt = System.currentTimeMillis(),
-                updatedAt = System.currentTimeMillis()
+                createdAt = now,
+                updatedAt = now
             )
-            saveRecipeUseCase(recipe)
+            when (val result = saveRecipeUseCase(recipe)) {
+                is Result.Success -> {
+                    _uiState.value = _uiState.value.copy(isLoading = false)
+                    // Optionally refresh list could be triggered here
+                }
+                is Result.Failure -> {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        error = result.exception.message ?: "Failed to create recipe"
+                    )
+                }
+                is Result.Loading -> { /* no-op */ }
+            }
         }
     }
 

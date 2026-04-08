@@ -1,5 +1,6 @@
 package com.mealmuse.data.ai.di
 
+import android.content.Context
 import com.mealmuse.data.ai.LLMRepositoryImpl
 import com.mealmuse.data.ai.LLMSettingsStore
 import com.mealmuse.data.ai.provider.AnthropicProvider
@@ -11,6 +12,7 @@ import com.mealmuse.domain.repository.LLMRepository
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
@@ -45,6 +47,6 @@ object AIModule {
 
     @Provides
     @Singleton
-    fun provideLLMRepository(factory: LLMProviderFactory, settingsStore: LLMSettingsStore): LLMRepository =
-        LLMRepositoryImpl(factory, settingsStore)
+    fun provideLLMRepository(factory: LLMProviderFactory, @ApplicationContext context: Context): LLMRepository =
+        LLMRepositoryImpl(factory, context)
 }
