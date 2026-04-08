@@ -82,9 +82,12 @@ class GenerateMealPlanUseCase @Inject constructor(
                 endDay = endDay,
                 variationHint = variationSeed + index
             )
-            val chunkResult = llmRepository.generateMealPlan(prompt, settings)
-            val chunkPlan = (chunkResult as? Result.Success)?.data
-                ?: throw (chunkResult as Result.Failure).exception
+        val chunkResult = llmRepository.generateMealPlan(prompt, settings)
+        val chunkPlan = when (chunkResult) {
+            is Result.Success -> chunkResult.data
+            is Result.Failure -> throw chunkResult.exception
+            is Result.Loading -> throw IllegalStateException("Unexpected loading state during meal plan generation")
+        }
 
             allEntries.addAll(chunkPlan.entries)
             onChunkComplete(index + 1, chunks.size)

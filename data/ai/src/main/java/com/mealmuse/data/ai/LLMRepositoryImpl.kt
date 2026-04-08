@@ -31,21 +31,26 @@ class LLMRepositoryImpl @Inject constructor(
     override fun getLLMSettingsFlow(): Flow<LLMSettings> = _settingsFlow.asStateFlow()
 
     override suspend fun generateMealPlan(prompt: String, settings: LLMSettings): Result<MealPlan> =
-        suspendResult {
-            Log.d(TAG, "Generating meal plan with model: ${settings.model}, provider: ${settings.provider}")
-            val provider = providerFactory.createProvider(settings.provider)
-            val rawResponse = provider.generateContent(prompt, settings.apiKey, settings.model)
-            Log.d(TAG, "LLM Response length: ${rawResponse.length}")
-            Log.d(TAG, "LLM Response: ${rawResponse.take(300)}")
-            
-            if (rawResponse.contains("error", ignoreCase = true) || 
-                rawResponse.contains("Cannot read", ignoreCase = true) ||
-                rawResponse.isBlank()) {
-                throw Exception("LLM returned an error or empty response: $rawResponse")
+        try {
+            suspendResult {
+                Log.d(TAG, "Generating meal plan with model: ${settings.model}, provider: ${settings.provider}")
+                val provider = providerFactory.createProvider(settings.provider)
+                val rawResponse = provider.generateContent(prompt, settings.apiKey, settings.model)
+                Log.d(TAG, "LLM Response length: ${rawResponse.length}")
+                Log.d(TAG, "LLM Response: ${rawResponse.take(300)}")
+
+                if (rawResponse.contains("error", ignoreCase = true) ||
+                    rawResponse.contains("Cannot read", ignoreCase = true) ||
+                    rawResponse.isBlank()) {
+                    throw Exception("LLM returned an error or empty response: $rawResponse")
+                }
+
+                val cleanedJson = cleanJsonResponse(rawResponse)
+                MealPlanParser.parse(cleanedJson)
             }
-            
-            val cleanedJson = cleanJsonResponse(rawResponse)
-            MealPlanParser.parse(cleanedJson)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to generate meal plan: ${e.message}", e)
+            Result.Failure(e)
         }
 
     override suspend fun researchRecipes(prompt: String, settings: LLMSettings): Result<List<Recipe>> =
