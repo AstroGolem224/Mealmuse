@@ -155,9 +155,13 @@ fun AppNavGraph(
                     }
                 )
             }
-            composable(Screen.MealPlan.route) {
-                MealPlanScreen()
+    composable(Screen.MealPlan.route) {
+        MealPlanScreen(
+            onRecipeClick = { recipeId ->
+                navController.navigate("recipe_detail/$recipeId")
             }
+        )
+    }
             composable(Screen.Cookbook.route) {
                 RecipeBookScreen(
                     onRecipeClick = { recipeId ->

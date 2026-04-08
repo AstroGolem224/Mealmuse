@@ -31,7 +31,8 @@ private val DURATION_OPTIONS = listOf(
 @Composable
 fun MealPlanScreen(
     modifier: Modifier = Modifier,
-    viewModel: MealPlanViewModel = hiltViewModel()
+    viewModel: MealPlanViewModel = hiltViewModel(),
+    onRecipeClick: (String) -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var selectedDay by remember { mutableIntStateOf(1) }
@@ -191,14 +192,14 @@ fun MealPlanScreen(
                         contentPadding = PaddingValues(16.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        items(MealType.entries.toList()) { mealType ->
-                            val entry = viewModel.getEntry(effectiveDay, mealType)
-                            MealSlot(
-                                mealType = mealType.displayName,
-                                recipeName = entry?.recipe?.name ?: "Not planned",
-                                onClick = { /* Navigate to recipe */ }
-                            )
-                        }
+        items(MealType.entries.toList()) { mealType ->
+            val entry = viewModel.getEntry(effectiveDay, mealType)
+            MealSlot(
+                mealType = mealType.displayName,
+                recipeName = entry?.recipe?.name ?: "Not planned",
+                onClick = { entry?.recipe?.id?.let { onRecipeClick(it) } }
+            )
+        }
                     }
                 }
             }
